@@ -1,35 +1,26 @@
-# ESGR
-Code for paper "Evidence Sentence Graph Reasoning with Heuristic Strategies for Document-Level Biomedical Relation Extraction".
+# EBTSR
+Code for paper "Enhancing Document-Level Biomedical Relation Extraction through Evidence-Based Two-Stage Reasoning ".
 # DataSet
 We use two widely used biomedical relation extraction datasets CDR and GDA to evaluate our model.
 # Project Structure
 The expected structure of files is:
 ```
-ESGR
+EBTSR
  |-- dataset
  |    |-- cdr
  |    |    |-- train_filter.data
  |    |    |-- dev_filter.data
  |    |    |-- test_filter.data
- |    |    |-- convert_CDR
- |    |    |    |-- convert_train.json
- |    |    |    |-- convert_test.json
- |    |    |    |-- convert_dev.json
  |    |-- gda
  |    |    |-- train.data
  |    |    |-- dev.data
  |    |    |-- test.data
- |    |    |-- convert_GDA
- |    |    |    |-- convert_train.json
- |    |    |    |-- convert_test.json
- |    |    |    |-- convert_dev.json
  |-- saved_model
       |-- best.model
       |-- log.txt
  |-- biobert_base
  |-- bioformer_base
  |-- scibert_base
- |-- convert_pro.py
  |-- utils.py
  |-- adj_utils.py
  |-- prepro.py
