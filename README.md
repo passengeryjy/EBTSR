@@ -24,16 +24,16 @@ EBTSR
  |-- prepro.py
  |-- long_seq.py
  |-- losses.py
- |-- train_cdr.py
- |-- train_gda.py
+ |-- run_cdr.py
+ |-- run_gda.py
  |-- rgcn_utils.py
- |-- model.py
+ |-- EBTSR.py
 ```
 # Training
 Models trained on CDA and GDA model with the following command:
 ```
->> python train_cdr.py  # for CDR
->> python train_gda.py  # for GDA
+>> python run_cdr.py  # for CDR
+>> python run_gda.py  # for GDA
 ```
 You can save the model by setting the ``--save_path`` argument before training. The model correponds to the best dev results will be saved in the best.model. 
 # Evaluation
