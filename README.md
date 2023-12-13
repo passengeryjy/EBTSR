@@ -29,7 +29,8 @@ EBTSR
  |-- rgcn_utils.py
  |-- EBTSR.py
 ```
-#Process
+
+# Process
 Before you run the code, you should first convert the data format into the file of json.
 # Training
 Models trained on CDA and GDA model with the following command:
