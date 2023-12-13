@@ -16,28 +16,25 @@ EBTSR
  |    |    |-- dev.data
  |    |    |-- test.data
  |-- saved_model
-      |-- best.model
-      |-- log.txt
  |-- biobert_base
  |-- bioformer_base
  |-- scibert_base
  |-- utils.py
- |-- adj_utils.py
+ |-- graph.py
  |-- prepro.py
  |-- long_seq.py
  |-- losses.py
  |-- train_cdr.py
  |-- train_gda.py
- |-- rgcn.py
+ |-- rgcn_utils.py
  |-- model.py
 ```
-# Training and Evaluation
-## Training
-Train CDA and GDA model with the following command:
+# Training
+Models trained on CDA and GDA model with the following command:
 ```
 >> python train_cdr.py  # for CDR
 >> python train_gda.py  # for GDA
 ```
-You can save the model by setting the ``--save_path`` argument before training. The model correponds to the best dev results will be saved. 
+You can save the model by setting the ``--save_path`` argument before training. The model correponds to the best dev results will be saved in the best.model. 
 # Evaluation
-You can evaluate the saved model by setting the ``--load_path`` argument, then the code will skip training and evaluate the saved model on benchmarks.
+You can evaluate the saved model by setting the ``--load_path`` argument, the best model will be load on benchmarks.
