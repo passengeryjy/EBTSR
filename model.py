@@ -4,7 +4,7 @@ import torch.nn as nn
 from long_seq import process_long_input
 from losses import ATLoss
 from torch.nn.utils.rnn import pad_sequence    
-from rgcn import RGCN_Layer                     
+from rgcn_utils import RGCN_Layer                     
 from utils import EmbedLayer                    
 
 
@@ -99,7 +99,6 @@ class DocREModel(nn.Module):
         entity_att_batch = []
         entity_node_batch = []
         mention_pos_batch = []
-        #entity_node,mention_node,link_node分别为SIE部分三种结点，link_node缓解GCN过拟合问题
         mention_att_batch = []
         for i in range(len(entity_pos)):    #遍历一个batch_size中样本数，
             entity_nodes, mention_nodes, link_nodes = [], [], []
@@ -108,7 +107,7 @@ class DocREModel(nn.Module):
             mention_pos = []
             #取句子嵌入
             for start, end in link_pos[i]:
-                if end + offset < c:    #没有越界，直接提取桥结点所link的两个句子的表示和注意力
+                if end + offset < c:    
                     link_rep = sequence_output[i, start + offset: end + offset]
                     link_att = attention[i, :, start + offset: end + offset, start + offset: end + offset]
                     link_att = torch.mean(link_att, dim=0)
@@ -121,7 +120,6 @@ class DocREModel(nn.Module):
                 else:
                     link_rep = torch.zeros(self.config.hidden_size).to(sequence_output)
                 link_nodes.append(link_rep)
-            #取实体嵌入
             for e in entity_pos[i]:
                 mention_pos.append(len(mention_att))
                 if len(e) > 1:
@@ -166,7 +164,7 @@ class DocREModel(nn.Module):
             mention_nodes = torch.stack(mention_nodes, dim=0)   #提及结点
             mention_att = torch.stack(mention_att, dim=0)
             link_nodes = torch.stack(link_nodes, dim=0)
-            nodes = torch.cat([entity_nodes, mention_nodes, link_nodes], dim=0)     #SIE部分三种节点
+            nodes = torch.cat([entity_nodes, mention_nodes, link_nodes], dim=0)    
             nodes_type = self.type_embed(nodes_info[i][:, 6].to(sequence_output.device))
             nodes = torch.cat([nodes, nodes_type], dim=1)   #将节点与类型拼接
             nodes_batch.append(nodes)   ###
@@ -206,40 +204,38 @@ class DocREModel(nn.Module):
             e_num_max = e_num if e_num > e_num_max else e_num_max
         for i in range(len(entity_pos)):
             e_num = len(entity_pos[i])
-            entity_stru = nodes[i][: e_num] #得到Es，第i篇文档中的所有实体嵌入，nodes结构为ent_num+m_num+bridge_num
+            entity_stru = nodes[i][: e_num] #
             m_num, head_num, dim = mention_att[i].size()
-            mention_stru = nodes[i][e_num: e_num+m_num] #得到Ms
-            #CIE模块
+            mention_stru = nodes[i][e_num: e_num+m_num] #
             e_att = entity_att[i].mean(1)
             e_att = e_att / (e_att.sum(1, keepdim=True) + 1e-5)
-            e_context = torch.einsum('ij, jl->il', e_att, sequence_output[i])   #Ec
+            e_context = torch.einsum('ij, jl->il', e_att, sequence_output[i])   #
 
             m_att = mention_att[i].mean(1)
             m_att = m_att / (m_att.sum(1, keepdim=True) + 1e-5) #
-            m_context = torch.einsum('ij,jl->il', m_att, sequence_output[i])    #Mc
+            m_context = torch.einsum('ij,jl->il', m_att, sequence_output[i])    
 
-            n, h = entity_stru.size()   #分别为实体数量，实体嵌入维度为d_hid=d_emb
+            n, h = entity_stru.size()   
             e_s = torch.zeros([e_num_max, h]).to(sequence_output)
             e_s[:n] = entity_stru
-            e_s_map = torch.einsum('ij, jk->jik', e_s, e_s.t()) #论文中公式11    Es*Es转置
+            e_s_map = torch.einsum('ij, jk->jik', e_s, e_s.t()) #
             entity_s.append(e_s_map)
             m, h = mention_stru.size()
             m_s = torch.zeros([m_num_max, h]).to(sequence_output)
             m_s[:m] = mention_stru
-            m_s_map = torch.einsum('ij,jk->jik', m_s, m_s.t())  #论文中公式10    Ms*Ms转置
+            m_s_map = torch.einsum('ij,jk->jik', m_s, m_s.t())  #
             mention_s.append(m_s_map)
             n, h_2 = e_context.size()
             e_c = torch.zeros([e_num_max, h_2]).to(sequence_output)
             e_c[:n] = e_context
             ec_rep.append(e_c)
-            e_c_map = torch.einsum('ij, jk->jik', e_c, e_c.t()) #论文中公式9,Ec*Ec转置
+            e_c_map = torch.einsum('ij, jk->jik', e_c, e_c.t()) #
             entity_c.append(e_c_map)
-            m, h = m_context.size() #m和h分别为提及数和每个提及上下文向量大小demb
-            m_c = torch.zeros([m_num_max, h]).to(sequence_output)   #创建一个形状为(m_num_max, h)的0张量m_c，其中m_num_max是所有mentions中最大的mention数量
-            m_c[:m] = m_context #将之前得到的m_context复制到m_c的前m行
-            m_c_map = torch.einsum('ij,jk->jik', m_c, m_c.t())  #论文中公式8 ， Mc*Mc转置，
+            m, h = m_context.size() #
+            m_c = torch.zeros([m_num_max, h]).to(sequence_output)   
+            m_c[:m] = m_context #
+            m_c_map = torch.einsum('ij,jk->jik', m_c, m_c.t())  
             mention_c.append(m_c_map)
-        #经处理后得到的特征，
         ec_rep = torch.stack(ec_rep, dim=0)
         entity_c = torch.stack(entity_c, dim=0)
         entity_s = torch.stack(entity_s, dim=0)
@@ -247,18 +243,18 @@ class DocREModel(nn.Module):
         mention_s = torch.stack(mention_s, dim=0)
         return entity_c, entity_s, mention_c, mention_s, ec_rep
 
-    def fusion_feature_e(self, feat_struc, feat_context):   #MDIF处理带有文本上下文信息和结构信息的实体表示
+    def fusion_feature_e(self, feat_struc, feat_context):
         feat_mix = feat_struc + feat_context
-        feat_s = self.fusion_s(feat_mix)    #MDIF模块中对结构信息进行重构
+        feat_s = self.fusion_s(feat_mix)   
         feat_c = self.fusion_c(feat_mix)
         feat_sc = feat_s + feat_c       #
-        w_feat_sc = self.sigmoid(feat_sc)   #公式14
-        feat_fusion = feat_struc * w_feat_sc + feat_context * (1-w_feat_sc) #得到Esc
+        w_feat_sc = self.sigmoid(feat_sc)  
+        feat_fusion = feat_struc * w_feat_sc + feat_context * (1-w_feat_sc) 
         return feat_fusion
 
     def fusion_feature_m(self, feat_struc, feat_context):
         feat_mix = feat_struc + feat_context
-        feat_s = self.fusion_s_m(feat_mix)  #对于包含结构信息的
+        feat_s = self.fusion_s_m(feat_mix)
         feat_c = self.fusion_c_m(feat_mix)
         feat_sc = feat_s + feat_c   #
         w_feat_sc = self.sigmoid(feat_sc)
@@ -289,8 +285,8 @@ class DocREModel(nn.Module):
         new_gcn_nodes = self.rgcn(new_nodes, sub_adjacency) #子图推理
 
         entity_c, entity_s, mention_c, mention_s, ec_rep = self.relation_map(gcn_nodes, entity_node_batch, entity_att, entity_pos, sequence_output, mention_att)    #MDIF
-        feature_e = self.fusion_feature_e(entity_s, entity_c)   #MDIF模块中得到Esc
-        feature_m = self.fusion_feature_m(mention_s, mention_c) #得到Msc  #(bs, emb_size, num_ents, num_ents)
+        feature_e = self.fusion_feature_e(entity_s, entity_c)   
+        feature_m = self.fusion_feature_m(mention_s, mention_c) #
         r_rep_e = self.conv_reason_e_l1(feature_e)
         r_rep_e = self.conv_reason_e_l2(r_rep_e)    #Ers,结构为demb*Ne*Ne，(num_rels, hidden_size, num_ents, num_ents)
         r_rep_m = self.conv_reason_m_l1(feature_m)
