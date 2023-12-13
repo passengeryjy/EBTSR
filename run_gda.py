@@ -53,11 +53,9 @@ def train(args, model, train_features, dev_features, test_features):
                     num_steps += 1
                 if (step + 1) == len(train_dataloader) - 1 or (args.evaluation_steps > 0 and num_steps % args.evaluation_steps == 0 and step % args.gradient_accumulation_steps == 0):
                     dev_score, dev_output = evaluate(args, model, dev_features, tag="dev")
-                    test_score, test_output = evaluate(args, model, test_features, tag="test")
                     t2 = time()                
                     print(f'epoch:{epoch}, time:{humanized_time(t2-t1)}')               
                     print(dev_output)
-                    print(test_output)
                     if dev_score > best_score:
                         best_score = dev_score
                         if args.save_path != "":
@@ -65,7 +63,6 @@ def train(args, model, train_features, dev_features, test_features):
                             with open('./saved_model/log.txt', 'a') as f:
                                 f.writelines(f'epoch:{epoch}\n')
                                 f.writelines(f'{dev_output}\n')
-                                f.writelines(f'{test_output}\n')
                                 f.writelines('\n')
 
         return num_steps
